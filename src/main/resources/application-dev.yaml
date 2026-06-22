@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: g_67_shop
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/g_67_shop
+    username: student
+    password: ${DB_PASSWORD}
+  liquibase:
+    change-log: classpath:/db/changelog/db.changelog-master.xml
+
+
+  mail:
+    username: vasylenkoanatolii1989@gmail.com
+    password: ${GMAIL_APP_PASSWORD}
+    host: smtp.gmail.com
+    port: 587
+    properties:
+      mail:
+        debug: false
+        smtp:
+          auth: true
+          startlts:
+            enable: true
+          ssl:
+            protocols: TLSv1.2
+            trust: smtp.gmail.com
+
+
+logging:
+  file:
+    name: logs/log.log
+  level:
+    root: info
+
+messages:
+  greeting: Hello from local application
+
+server:
+  host: localhost
+  port: 8080

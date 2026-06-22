@@ -32,8 +32,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @OneToMany
-    private Set<ConfirmationCode> confirmationCodes= new HashSet<>(); //??
+    //@OneToMany
+    //private Set<ConfirmationCode> confirmationCodes= new HashSet<>(); //??
 
     public User() {
     }

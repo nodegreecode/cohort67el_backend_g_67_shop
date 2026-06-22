@@ -28,6 +28,12 @@ public class ConfirmationCode {
     public ConfirmationCode() {
     }
 
+    public ConfirmationCode(String value, LocalDateTime expiration, User user) {
+        this.value = value;
+        this.expiration = expiration;
+        this.user = user;
+    }
+
     public Long getId() {
         return id;
     }

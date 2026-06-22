@@ -56,7 +56,9 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(encodedPassword);
         user.setName(name);
+
         repository.save(user);
+
         emailService.sendConfirmationEmail(user);
     }
 }

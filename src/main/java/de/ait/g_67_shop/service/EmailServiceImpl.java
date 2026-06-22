@@ -2,16 +2,24 @@ package de.ait.g_67_shop.service;
 
 import de.ait.g_67_shop.domain.User;
 import de.ait.g_67_shop.exceptions.types.EmailSendingException;
+import de.ait.g_67_shop.service.interfaces.ConfirmationCodeService;
 import de.ait.g_67_shop.service.interfaces.EmailService;
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.ui.freemarker.FreeMarkerTemplateUtils;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class EmailServiceImpl implements EmailService {
@@ -21,17 +29,20 @@ public class EmailServiceImpl implements EmailService {
     private final String host;
     private final String port;
     private final String mailFrom;
+    private final ConfirmationCodeService codeService;
 
     public EmailServiceImpl(JavaMailSender mailSender,
                             Configuration mailConfig,
                             @Value("${server.host}") String host,
                             @Value("${server.port}") String port,
-                            @Value("${spring.mail.username}") String mailFrom) {
+                            @Value("${spring.mail.username}") String mailFrom,
+                            ConfirmationCodeService codeService) {
         this.mailSender = mailSender;
         this.mailConfig = mailConfig;
         this.host = host;
         this.port = port;
         this.mailFrom = mailFrom;
+        this.codeService = codeService;
 
         mailConfig.setDefaultEncoding("UTF-8");
         TemplateLoader loader = new ClassTemplateLoader(EmailServiceImpl.class, "/mail/");
@@ -40,17 +51,36 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendConfirmationEmail(User user) {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+        String text = generateConfirmationEmail(user);
+
+        try {
+            helper.setFrom(mailFrom);
+            helper.setTo(user.getEmail());
+            helper.setSubject("Registration confirmation");
+            helper.setText(text, true);
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new EmailSendingException("Email sending error", e);
+        }
 
     }
 
     private String generateConfirmationEmail(User user) {
-
         try {
             Template template = mailConfig.getTemplate("confirm_registration_mail.ftlh");
-        } catch (IOException e) {
+
+            String code = codeService.generateConfirmationCode(user);
+            String link = String.format("http://%s:%s/users/confirm/%s}", host, port, code);
+
+            Map<String, Object> mailValues = new HashMap<>();
+            mailValues.put("name", user.getName());
+            mailValues.put("link", link);
+            return FreeMarkerTemplateUtils.processTemplateIntoString(template, mailValues);
+        } catch (IOException | TemplateException e) {
             throw new EmailSendingException("Email text generation error", e);
         }
-
-        return "";
     }
 }

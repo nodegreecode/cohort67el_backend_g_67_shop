@@ -2,21 +2,32 @@ package de.ait.g_67_shop.controller;
 
 import de.ait.g_67_shop.domain.Customer;
 import de.ait.g_67_shop.domain.Product;
+import de.ait.g_67_shop.domain.User;
+import de.ait.g_67_shop.domain.enums.Role;
 import de.ait.g_67_shop.dto.customer.CustomerDto;
 import de.ait.g_67_shop.dto.customer.CustomerSaveDto;
 import de.ait.g_67_shop.dto.customer.CustomerUpdateDto;
 import de.ait.g_67_shop.dto.position.PositionUpdateDto;
 import de.ait.g_67_shop.repository.CustomerRepository;
 import de.ait.g_67_shop.repository.ProductRepository;
+import de.ait.g_67_shop.repository.UserRepository;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
+import javax.crypto.SecretKey;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -32,19 +43,33 @@ public class CustomerControllerTestIT {
     private CustomerRepository repository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
     private ProductRepository productRepository;
+
+    @Value("${KEY_PHRASE_ACCESS}")
+    private String accessPhrase;
+
+    private String adminAccessToken;
 
     private static final String CUSTOMERS_RESOURCE = "/customers";
 
     @BeforeEach
     void setUp() {
         httpClient = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+        addUsersToDb();
+        createAdminAccessToken();
     }
 
     @AfterEach
     void tearDown() {
         repository.deleteAll();
         productRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -52,7 +77,11 @@ public class CustomerControllerTestIT {
         var saveDto = new CustomerSaveDto();
         saveDto.setName("Tester");
 
-        httpClient.post().uri(CUSTOMERS_RESOURCE)
+        String tokenCookie = "Access-Token=" + adminAccessToken;
+
+        httpClient.post()
+                .uri(CUSTOMERS_RESOURCE)
+                .cookie("Access-Token", adminAccessToken)
                 .body(saveDto)
                 .exchange()
                 .expectStatus()
@@ -73,7 +102,11 @@ public class CustomerControllerTestIT {
     void shouldReturn404WhenCustomerInactive() {
         var savedCustomer = createCustomer("Peter", false);
 
-        httpClient.get().uri(CUSTOMERS_RESOURCE + "/" + savedCustomer.getId())
+        String tokenCookie = "Access-Token=" + adminAccessToken;
+
+        httpClient.get()
+                .uri(CUSTOMERS_RESOURCE + "/" + savedCustomer.getId())
+                .header("Cookie", tokenCookie)
                 .exchange()
                 .expectStatus()
                 .isNotFound()
@@ -90,7 +123,11 @@ public class CustomerControllerTestIT {
         var updateDto = new CustomerUpdateDto();
         updateDto.setName("Rene");
 
-        httpClient.put().uri(CUSTOMERS_RESOURCE + "/" + savedCustomer.getId())
+        String tokenCookie = "Access-Token=" + adminAccessToken;
+
+        httpClient.put()
+                .uri(CUSTOMERS_RESOURCE + "/" + savedCustomer.getId())
+                .cookie("Access-Token", adminAccessToken)
                 .body(updateDto)
                 .exchange()
                 .expectStatus()
@@ -158,6 +195,30 @@ public class CustomerControllerTestIT {
         customer.setName(name);
         customer.setActive(isActive);
         return repository.save(customer);
+    }
+
+    private void createAdminAccessToken() {
+        Date now = new Date();
+        Date expiration = new Date(now.getTime() + 60000);
+
+        SecretKey secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(accessPhrase));
+
+        adminAccessToken = Jwts
+                .builder()
+                .subject("admin@test.com")
+                .expiration(expiration)
+                .signWith(secretKey)
+                .compact();
+    }
+
+    private void addUsersToDb() {
+        User admin = new User();
+        admin.setEmail("admin@test.com");
+        admin.setPassword(passwordEncoder.encode("adminPass"));
+        admin.setName("Admin");
+        admin.setRole(Role.ROLE_ADMIN);
+        admin.setConfirmed(true);
+        userRepository.save(admin);
     }
 
 

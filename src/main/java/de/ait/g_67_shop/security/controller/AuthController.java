@@ -6,10 +6,9 @@ import de.ait.g_67_shop.security.service.AuthService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springdoc.core.properties.SwaggerUiConfigProperties;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -61,5 +60,10 @@ public class AuthController {
         refreshCookie.setHttpOnly(true);
         refreshCookie.setMaxAge(0);
         response.addCookie(refreshCookie);
+    }
+
+    @GetMapping("/csrf")
+    public CsrfToken getCsrfToken(CsrfToken csrfToken) {
+        return csrfToken;
     }
 }

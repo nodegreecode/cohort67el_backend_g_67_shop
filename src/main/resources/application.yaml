@@ -17,3 +17,6 @@ logging:
 
 messages:
   greeting: Hello from Digital Ocean
+
+security:
+  csrf-enabled: true

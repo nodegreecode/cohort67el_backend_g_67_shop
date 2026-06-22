@@ -20,7 +20,7 @@ spring:
         debug: false
         smtp:
           auth: true
-          startlts:
+          starttls:
             enable: true
           ssl:
             protocols: TLSv1.2
@@ -39,3 +39,6 @@ messages:
 server:
   host: localhost
   port: 8080
+
+security:
+  csrf-enabled: false
